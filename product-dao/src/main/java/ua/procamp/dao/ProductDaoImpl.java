@@ -99,11 +99,30 @@ public class ProductDaoImpl implements ProductDao {
         }
     }
 
-
     @Override
     public Product findOne(Long id) {
-        Product product = null;
-        return product;
+        requireNonNull(id);
+        try (Connection connection = dataSource.getConnection()) {
+            PreparedStatement findStatement = prepareFindStatement(id, connection);
+            ResultSet resultSet = findStatement.executeQuery();
+            if (resultSet.next()) {
+                return getProductFromRow(resultSet);
+            } else {
+                throw new DaoOperationException(String.format("Product with id = %d does not exist", id));
+            }
+        } catch (SQLException e) {
+            throw new DaoOperationException(String.format("Error finding product by id = %d", id), e);
+        }
+    }
+
+    private PreparedStatement prepareFindStatement(final Long id, final Connection connection) {
+        try {
+            PreparedStatement statement = connection.prepareStatement(FIND_QUERY);
+            statement.setLong(1, id);
+            return statement;
+        } catch (SQLException e) {
+            throw new DaoOperationException(String.format("Cannot prepare select by id statement for id = %d", id), e);
+        }
     }
 
     @Override
