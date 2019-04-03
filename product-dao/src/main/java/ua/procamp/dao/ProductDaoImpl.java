@@ -10,20 +10,17 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Stream;
 
+import static java.util.Objects.isNull;
 import static java.util.Objects.requireNonNull;
 
 public class ProductDaoImpl implements ProductDao {
 
-    private final String INSERT_QUERY = "INSERT INTO products (name, producer, price, expiration_date) VALUES (?, ?, ?, ?);";
     private final String FIND_ALL_QUERY = "SELECT * FROM products;";
     private final String FIND_QUERY = "SELECT p.* FROM products p WHERE p.id = ?";
-    private final String SQL_UPDATE_PRODUCT =
-            "UPDATE products SET (name, producer, price, expiration_date, creation_time) = (?, ?, ?, ?, ?)" +
-                    "WHERE products.id = ?";
-    private final String SQL_REMOVE_PRODUCT =
-            "DELETE FROM products WHERE products.id = ?";
+    private final String REMOVE_QUERY = "DELETE FROM products WHERE products.id = ?";
+    private final String INSERT_QUERY = "INSERT INTO products (name, producer, price, expiration_date) VALUES (?, ?, ?, ?);";
+    private final String UPDATE_QUERY = "UPDATE products SET (name, producer, price, expiration_date) = (?, ?, ?, ?) WHERE products.id = ?";
 
     private DataSource dataSource;
 
@@ -127,6 +124,33 @@ public class ProductDaoImpl implements ProductDao {
 
     @Override
     public void update(Product product) {
+        requireNonNull(product);
+        if (isNull(product.getId())) {
+            throw new DaoOperationException("Product id cannot be null");
+        }
+        try (Connection connection = dataSource.getConnection()) {
+            PreparedStatement updateStatement = prepareUpdateStatement(product, connection);
+            int rowCount = updateStatement.executeUpdate();
+            if (rowCount == 0) {
+                throw new DaoOperationException(String.format("Product with id = %d does not exist", product.getId()));
+            }
+        } catch (SQLException e) {
+            throw new DaoOperationException(String.format("Error updating product: %s", product));
+        }
+    }
+
+    private PreparedStatement prepareUpdateStatement(Product product, Connection connection) {
+        try {
+            PreparedStatement updateStatement = connection.prepareStatement(UPDATE_QUERY);
+            updateStatement.setString(1, product.getName());
+            updateStatement.setString(2, product.getProducer());
+            updateStatement.setBigDecimal(3, product.getPrice());
+            updateStatement.setDate(4, Date.valueOf(product.getExpirationDate()));
+            updateStatement.setLong(5, product.getId());
+            return updateStatement;
+        } catch (SQLException e) {
+            throw new DaoOperationException(String.format("Cannot prepare statement for product: %s", product));
+        }
     }
 
     @Override
