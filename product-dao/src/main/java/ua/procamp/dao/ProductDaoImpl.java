@@ -14,18 +14,30 @@ import java.util.List;
 import static java.util.Objects.isNull;
 
 public class ProductDaoImpl implements ProductDao {
-    private final String SQL_FIND_PRODUCT = "SELECT p.name, p.producer, p.price, p.expiration_date, p.creation_time " +
+    private final String SQL_FIND_PRODUCT =
+            "SELECT p.name, p.producer, p.price, p.expiration_date, p.creation_time " +
             "FROM products p " +
             "WHERE p.id = ?";
-    private final String SQL_FIND_ALL_PRODUCTS = "SELECT * FROM products;";
-    private final String SQL_SAVE_PRODUCT = "INSERT INTO products (id, name, producer, price, expiration_date, creation_time) " +
-            "VALUES (?, ?, ?, ?, ?, ?);";
-    private final String SQL_UPDATE_PRODUCT = "UPDATE products SET (name, producer, price, expiration_date, creation_time) = (?, ?, ?, ?, ?)" +
+
+    private final String SQL_FIND_ALL_PRODUCTS =
+            "SELECT * FROM products;";
+
+    private final String SQL_SAVE_PRODUCT =
+            "INSERT INTO products (name, producer, price, expiration_date, creation_time) " +
+            "VALUES (?, ?, ?, ?, ?);";
+
+    private final String SQL_UPDATE_PRODUCT =
+            "UPDATE products SET (name, producer, price, expiration_date, creation_time) = (?, ?, ?, ?, ?)" +
             "WHERE products.id = ?";
-    private final String SQL_REMOVE_PRODUCT = "DELETE FROM products WHERE products.id = ?";
+
+    private final String SQL_REMOVE_PRODUCT =
+            "DELETE FROM products WHERE products.id = ?";
+
     private final String ERROR_SAVING_PRODUCT_STRING = "Error saving product: %s";
+    private final String ERROR_REMOVING_PRODUCT_STRING = "Error removing product: %s";
     private final String ERROR_UPDATING_PRODUCT_STRING = "Error updating product: %s";
     private final String ERROR_EXISTENCE_PRODUCT_STRING = "Product with id = %d does not exist";
+
     private DataSource dataSource;
 
     public ProductDaoImpl(DataSource dataSource) {
@@ -37,20 +49,31 @@ public class ProductDaoImpl implements ProductDao {
                 isNull(product.getName()) ||
                 isNull(product.getProducer()) ||
                 isNull(product.getPrice()) ||
-                isNull(product.getExpirationDate()) ||
-                isNull(product.getCreationTime())) {
+                isNull(product.getExpirationDate())) {
             throw new DaoOperationException(String.format(ERROR_SAVING_PRODUCT_STRING, product));
         }
     }
+
     private void checkUpdateRestrictions(Product product) {
         if (isNull(product)) {
-            throw new DaoOperationException(String.format(ERROR_SAVING_PRODUCT_STRING, product));
+            throw new DaoOperationException(String.format(ERROR_UPDATING_PRODUCT_STRING, product));
         }
         checkId(product.getId());
     }
+
+    private void checkRemoveRestrictions(Product product) {
+        if (isNull(product)) {
+            throw new DaoOperationException(String.format(ERROR_REMOVING_PRODUCT_STRING, product));
+        }
+        checkId(product.getId());
+    }
+
     private void checkId(Long id) {
         if (isNull(id)) {
             throw new DaoOperationException("Product id cannot be null");
+        }
+        if (id < 0) {
+            throw new DaoOperationException(String.format("Product with id = %d does not exist", id));
         }
     }
 
@@ -59,14 +82,14 @@ public class ProductDaoImpl implements ProductDao {
         checkSaveRestrictions(product);
         try (Connection connection = dataSource.getConnection()) {
             PreparedStatement statement = connection.prepareStatement(SQL_SAVE_PRODUCT);
-            statement.setLong(1, product.getId());
-            statement.setString(2, product.getName());
-            statement.setString(3, product.getProducer());
-            statement.setBigDecimal(4, product.getPrice());
+            statement.setString(1, product.getName());
+            statement.setString(2, product.getProducer());
+            statement.setBigDecimal(3, product.getPrice());
             Date expirationDate = Date.valueOf(product.getExpirationDate());
-            statement.setDate(5, expirationDate);
-            Timestamp timestamp = Timestamp.valueOf(product.getCreationTime());
-            statement.setTimestamp(6, timestamp);
+            statement.setDate(4, expirationDate);
+            Timestamp timestamp = Timestamp.valueOf(LocalDateTime.now());
+            statement.setTimestamp(5, timestamp);
+            statement.executeUpdate();
             connection.commit();
         } catch (SQLException e) {
             throw new DaoOperationException(String.format(ERROR_SAVING_PRODUCT_STRING, product));
@@ -136,7 +159,7 @@ public class ProductDaoImpl implements ProductDao {
 
     @Override
     public void remove(Product product) {
-        checkUpdateRestrictions(product);
+        checkRemoveRestrictions(product);
         try (Connection connection = dataSource.getConnection()) {
             PreparedStatement statement = connection.prepareStatement(SQL_REMOVE_PRODUCT);
             statement.setLong(1, product.getId());
