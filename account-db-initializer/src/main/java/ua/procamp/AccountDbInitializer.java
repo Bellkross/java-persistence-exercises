@@ -12,15 +12,15 @@ public class AccountDbInitializer {
     private DataSource dataSource;
     private String SQL_CREATE_TABLE = "CREATE TABLE account (" +
             "id BIGINT NOT NULL," +
-            "email VARCHAR(255) NOT NULL UNIQUE," +
+            "email VARCHAR(255) NOT NULL," +
             "first_name VARCHAR(255) NOT NULL," +
             "last_name VARCHAR(255) NOT NULL," +
             "gender VARCHAR(255) NOT NULL," +
             "birthday DATE NOT NULL," +
-            "balance DECIMAL(19, 4) NOT NULL," +
+            "balance DECIMAL(19, 4) NULL," +
             "creation_time TIMESTAMP NOT NULL DEFAULT now()," +
             "CONSTRAINT account_pk PRIMARY KEY (id)," +
-            "CONSTRAINT account_email_uq UNIQUE(email)" +
+            "CONSTRAINT account_email_uq UNIQUE (email)" +
             ");";
 
     public AccountDbInitializer(DataSource dataSource) {
