@@ -124,16 +124,10 @@ public class ProductDaoImpl implements ProductDao {
 
     @Override
     public void update(Product product) {
-        requireNonNull(product);
-        if (isNull(product.getId())) {
-            throw new DaoOperationException("Product id cannot be null");
-        }
+        checkProductForUpdate(product);
         try (Connection connection = dataSource.getConnection()) {
             PreparedStatement updateStatement = prepareUpdateStatement(product, connection);
-            int rowCount = updateStatement.executeUpdate();
-            if (rowCount == 0) {
-                throw new DaoOperationException(String.format("Product with id = %d does not exist", product.getId()));
-            }
+            checkUpdateStatementResult(updateStatement.executeUpdate(), product.getId());
         } catch (SQLException e) {
             throw new DaoOperationException(String.format("Error updating product: %s", product));
         }
@@ -155,6 +149,36 @@ public class ProductDaoImpl implements ProductDao {
 
     @Override
     public void remove(Product product) {
+        checkProductForUpdate(product);
+        try (Connection connection = dataSource.getConnection()) {
+            PreparedStatement removeStatement = prepareRemoveStatement(product, connection);
+            checkUpdateStatementResult(removeStatement.executeUpdate(), product.getId());
+        } catch (SQLException e) {
+            throw new DaoOperationException(String.format("Error removing product: %s", product));
+        }
+    }
+
+    private PreparedStatement prepareRemoveStatement(Product product, Connection connection) {
+        try {
+            PreparedStatement removeStatement = connection.prepareStatement(REMOVE_QUERY);
+            removeStatement.setLong(1, product.getId());
+            return removeStatement;
+        } catch (SQLException e) {
+            throw new DaoOperationException(String.format("Cannot prepare statement for product: %s", product));
+        }
+    }
+
+    private void checkUpdateStatementResult(int rowCount, long id) {
+        if (rowCount == 0) {
+            throw new DaoOperationException(String.format("Product with id = %d does not exist", id));
+        }
+    }
+
+    private void checkProductForUpdate(Product product) {
+        requireNonNull(product);
+        if (isNull(product.getId())) {
+            throw new DaoOperationException("Product id cannot be null");
+        }
     }
 
 }
