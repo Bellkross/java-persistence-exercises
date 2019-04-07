@@ -6,7 +6,7 @@ import lombok.Data;
 @Data
 @Builder
 public class Program {
-    Long id;
-    String name;
-    Long version;
+    public Long id;
+    public String name;
+    public Long version;
 }

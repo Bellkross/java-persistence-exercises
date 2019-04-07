@@ -13,7 +13,7 @@ public class DataSourceProvider {
 
     public static DataSource getDataSource() {
         if (dataSource == null) {
-            synchronized (dataSource) {
+            synchronized (DataSourceProvider.class) {
                 if (dataSource == null) {
                     dataSource = createPostgresDataSource(databaseUrl, username, password);
                 }
