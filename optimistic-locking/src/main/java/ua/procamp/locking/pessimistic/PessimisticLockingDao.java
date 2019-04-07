@@ -1,4 +1,4 @@
-package ua.procamp.locking.optimistic;
+package ua.procamp.locking.pessimistic;
 
 import ua.procamp.locking.Program;
 import ua.procamp.locking.exception.OptimisticLockingException;
@@ -14,11 +14,11 @@ import java.util.Optional;
 import static ua.procamp.locking.ProgramQueries.SELECT_PROGRAM_QUERY;
 import static ua.procamp.locking.ProgramQueries.UPDATE_PROGRAM_QUERY;
 
-public class OptimisticLockingDao {
+public class PessimisticLockingDao {
 
     private final DataSource dataSource;
 
-    public OptimisticLockingDao(final DataSource dataSource) {
+    public PessimisticLockingDao(final DataSource dataSource) {
         this.dataSource = dataSource;
     }
 
@@ -54,47 +54,30 @@ public class OptimisticLockingDao {
         Objects.requireNonNull(updatedProgram);
         Objects.requireNonNull(updatedProgram.id);
         try (Connection connection = getConnection()) {
-            Optional<Program> programOptional = findProgramById(updatedProgram.id);
-            Program updatableProgram = programOptional.orElseThrow(
-                    () -> new SQLException(String.format("Program with id = %d doesn't exists", updatedProgram.id))
-            );
-            updatableProgram.name = updatedProgram.name;
             connection.setAutoCommit(false);
             connection.setTransactionIsolation(Connection.TRANSACTION_REPEATABLE_READ);
-            int updatedFieldsCount = 0;
-            try {
-                requireConsistencyWithDatabase(updatableProgram);
-                updatedFieldsCount = updateProgram(connection, updatableProgram);
-            } catch (OptimisticLockingException ole) {
+            Optional<Program> programOptional = findProgramById(updatedProgram.id);
+            Program updatableProgram = null;
+            if (programOptional.isEmpty()) {
                 connection.rollback();
-                throw ole;
+                throw new SQLException(String.format("Program with id = %d doesn't exists", updatedProgram.id));
+            } else {
+                updatableProgram = programOptional.get();
             }
+            updatableProgram.name = updatedProgram.name;
+            int updatedFieldsCount = updateProgram(connection, updatableProgram);
             connection.commit();
             return updatedFieldsCount;
         } catch (SQLException e) {
-            // ignore
+            e.printStackTrace();
         }
         return 0;
-    }
-
-    private void requireConsistencyWithDatabase(Program program) throws OptimisticLockingException {
-        Optional<Program> programOptional = findProgramById(program.id);
-        Program programForCheck = programOptional.orElseThrow(
-                () -> new OptimisticLockingException(
-                        String.format("Transaction failed because %s entity was removed", program)
-                )
-        );
-        if (!programForCheck.version.equals(program.version)) {
-            throw new OptimisticLockingException(
-                    String.format("Transaction failed because %s entity was modified", program)
-            );
-        }
     }
 
     private int updateProgram(Connection connection, Program program) throws SQLException {
         PreparedStatement statement = connection.prepareStatement(UPDATE_PROGRAM_QUERY);
         statement.setString(1, program.name);
-        statement.setLong(2, ++program.version);
+        statement.setLong(2, program.version); // no version changing
         statement.setLong(3, program.id);
         return statement.executeUpdate();
     }
