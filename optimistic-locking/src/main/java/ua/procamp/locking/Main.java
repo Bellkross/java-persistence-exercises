@@ -17,7 +17,7 @@ public class Main {
     private static AtomicBoolean noLocks = new AtomicBoolean(true);
 
     public static void main(String[] args) throws InterruptedException {
-        // testOptimisticLocking();
+        testOptimisticLocking();
 
         // testPessimisticLocking();
     }
