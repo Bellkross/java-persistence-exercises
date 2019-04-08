@@ -89,13 +89,7 @@ public class AccountDaoImpl implements AccountDao {
         EntityManager entityManager = emf.createEntityManager();
         entityManager.getTransaction().begin();
         try {
-            Account acc = entityManager.find(Account.class, account.getId());
-            acc.setEmail(account.getEmail());
-            acc.setCreationTime(account.getCreationTime());
-            acc.setBirthday(account.getBirthday());
-            acc.setBalance(account.getBalance());
-            acc.setFirstName(account.getFirstName());
-            acc.setGender(account.getGender());
+            Account acc = entityManager.merge(account);
             entityManager.persist(acc);
             entityManager.getTransaction().commit();
         } catch (Exception e) {
