@@ -11,8 +11,7 @@ import java.sql.SQLException;
 import java.util.Objects;
 import java.util.Optional;
 
-import static ua.procamp.locking.ProgramQueries.SELECT_PROGRAM_BY_ID_AND_VER_BLOCKING_QUERY;
-import static ua.procamp.locking.ProgramQueries.UPDATE_PROGRAM_QUERY;
+import static ua.procamp.locking.ProgramQueries.*;
 
 public class PessimisticLockingDao {
 
@@ -38,7 +37,7 @@ public class PessimisticLockingDao {
     }
 
     private PreparedStatement prepareSelectProgramStatement(Connection connection, Long programId) throws SQLException {
-        PreparedStatement statement = connection.prepareStatement(SELECT_PROGRAM_BY_ID_AND_VER_BLOCKING_QUERY);
+        PreparedStatement statement = connection.prepareStatement(SELECT_PROGRAM_BY_ID_BLOCKING_QUERY);
         statement.setLong(1, programId);
         return statement;
     }
@@ -50,7 +49,7 @@ public class PessimisticLockingDao {
                 .version(resultSet.getLong("version")).build();
     }
 
-    public int updateProgram(Program updatedProgram) throws OptimisticLockingException {
+    public int updateProgram(Program updatedProgram) {
         Objects.requireNonNull(updatedProgram);
         Objects.requireNonNull(updatedProgram.id);
         try (Connection connection = getConnection()) {
@@ -74,10 +73,9 @@ public class PessimisticLockingDao {
     }
 
     private int updateProgram(Connection connection, Program program) throws SQLException {
-        PreparedStatement statement = connection.prepareStatement(UPDATE_PROGRAM_QUERY);
+        PreparedStatement statement = connection.prepareStatement(UPDATE_PROGRAM_NO_VER_QUERY);
         statement.setString(1, program.name);
-        statement.setLong(2, program.version); // no version changing
-        statement.setLong(3, program.id);
+        statement.setLong(2, program.id);
         return statement.executeUpdate();
     }
 

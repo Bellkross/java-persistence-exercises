@@ -17,16 +17,16 @@ public class Main {
     private static AtomicBoolean noLocks = new AtomicBoolean(true);
 
     public static void main(String[] args) throws InterruptedException {
-        testOptimisticLocking();
+        // testOptimisticLocking();
 
-        // testPessimisticLocking();
+        testPessimisticLocking();
     }
 
     private static void testPessimisticLocking() throws InterruptedException {
         Program program1 = olDao.findProgramById(1L).get();
         program1.name = "empty";
         plDao.updateProgram(program1);
-        for(int i = 0; i < 2; ++i) {
+        for(int i = 0; i < 3; ++i) {
             startAppendingPessimisticThread();
         }
     }
