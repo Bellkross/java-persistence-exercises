@@ -1,11 +1,15 @@
 package ua.procamp.dao;
 
+import ua.procamp.exception.AccountDaoException;
 import ua.procamp.model.Account;
 
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+
+import static java.util.Objects.isNull;
 
 public class AccountDaoImpl implements AccountDao {
     private EntityManagerFactory emf;
@@ -16,6 +20,8 @@ public class AccountDaoImpl implements AccountDao {
 
     @Override
     public void save(Account account) {
+        Objects.requireNonNull(account);
+        requireCorrectAccount(account);
         EntityManager entityManager = emf.createEntityManager();
         entityManager.getTransaction().begin();
         try {
@@ -30,6 +36,7 @@ public class AccountDaoImpl implements AccountDao {
 
     @Override
     public Account findById(Long id) {
+        Objects.requireNonNull(id);
         EntityManager entityManager = emf.createEntityManager();
         entityManager.getTransaction().begin();
         Account result = null;
@@ -49,6 +56,7 @@ public class AccountDaoImpl implements AccountDao {
 
     @Override
     public Account findByEmail(String email) {
+        Objects.requireNonNull(email);
         EntityManager entityManager = emf.createEntityManager();
         entityManager.getTransaction().begin();
         Account result = null;
@@ -86,6 +94,9 @@ public class AccountDaoImpl implements AccountDao {
 
     @Override
     public void update(Account account) {
+        Objects.requireNonNull(account);
+        Objects.requireNonNull(account.getId());
+        requireCorrectAccount(account);
         EntityManager entityManager = emf.createEntityManager();
         entityManager.getTransaction().begin();
         try {
@@ -99,8 +110,17 @@ public class AccountDaoImpl implements AccountDao {
         }
     }
 
+    private void requireCorrectAccount(Account account) {
+        if (isNull(account.getFirstName()) || isNull(account.getLastName()) ||
+                isNull(account.getEmail()) || isNull(account.getBirthday()) ||
+                isNull(account.getGender()) || isNull(account.getCreationTime())) {
+            throw new AccountDaoException("Attempt to incorrect updating", new IllegalArgumentException());
+        }
+    }
+
     @Override
     public void remove(Account account) {
+        Objects.requireNonNull(account);
         EntityManager entityManager = emf.createEntityManager();
         entityManager.getTransaction().begin();
         try {
