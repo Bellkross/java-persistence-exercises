@@ -55,7 +55,6 @@ public class PessimisticLockingDao {
         Objects.requireNonNull(updatedProgram.id);
         try (Connection connection = getConnection()) {
             connection.setAutoCommit(false);
-            connection.setTransactionIsolation(Connection.TRANSACTION_REPEATABLE_READ);
             Optional<Program> programOptional = findProgramById(updatedProgram.id);
             Program updatableProgram = null;
             if (programOptional.isEmpty()) {
