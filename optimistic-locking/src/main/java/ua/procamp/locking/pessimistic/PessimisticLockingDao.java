@@ -11,7 +11,7 @@ import java.sql.SQLException;
 import java.util.Objects;
 import java.util.Optional;
 
-import static ua.procamp.locking.ProgramQueries.SELECT_PROGRAM_QUERY;
+import static ua.procamp.locking.ProgramQueries.SELECT_PROGRAM_BY_ID_AND_VER_BLOCKING_QUERY;
 import static ua.procamp.locking.ProgramQueries.UPDATE_PROGRAM_QUERY;
 
 public class PessimisticLockingDao {
@@ -38,7 +38,7 @@ public class PessimisticLockingDao {
     }
 
     private PreparedStatement prepareSelectProgramStatement(Connection connection, Long programId) throws SQLException {
-        PreparedStatement statement = connection.prepareStatement(SELECT_PROGRAM_QUERY);
+        PreparedStatement statement = connection.prepareStatement(SELECT_PROGRAM_BY_ID_AND_VER_BLOCKING_QUERY);
         statement.setLong(1, programId);
         return statement;
     }

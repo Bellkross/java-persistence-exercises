@@ -11,8 +11,7 @@ import java.sql.SQLException;
 import java.util.Objects;
 import java.util.Optional;
 
-import static ua.procamp.locking.ProgramQueries.SELECT_PROGRAM_QUERY;
-import static ua.procamp.locking.ProgramQueries.UPDATE_PROGRAM_QUERY;
+import static ua.procamp.locking.ProgramQueries.*;
 
 public class OptimisticLockingDao {
 
@@ -24,22 +23,45 @@ public class OptimisticLockingDao {
 
     public Optional<Program> findProgramById(final Long programId) {
         Objects.requireNonNull(programId);
-        Program program = null;
+        Program result = null;
         try (Connection connection = getConnection()) {
-            PreparedStatement statement = prepareSelectProgramStatement(connection, programId);
+            PreparedStatement statement = prepareSelectByIdProgramStatement(connection, programId);
             ResultSet resultSet = statement.executeQuery();
             if (resultSet.next()) {
-                program = fetchProgramFromRow(resultSet);
+                result = fetchProgramFromRow(resultSet);
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
-        return Optional.ofNullable(program);
+        return Optional.ofNullable(result);
     }
 
-    private PreparedStatement prepareSelectProgramStatement(Connection connection, Long programId) throws SQLException {
-        PreparedStatement statement = connection.prepareStatement(SELECT_PROGRAM_QUERY);
+    public Optional<Program> findSuchProgram(final Program program) {
+        Objects.requireNonNull(program);
+        Objects.requireNonNull(program.id);
+        Program result = null;
+        try (Connection connection = getConnection()) {
+            PreparedStatement statement = prepareSelectByIdAndVerProgramStatement(connection, program.id, program.version);
+            ResultSet resultSet = statement.executeQuery();
+            if (resultSet.next()) {
+                result = fetchProgramFromRow(resultSet);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return Optional.ofNullable(result);
+    }
+
+    private PreparedStatement prepareSelectByIdProgramStatement(Connection connection, Long programId) throws SQLException {
+        PreparedStatement statement = connection.prepareStatement(SELECT_PROGRAM_BY_ID_QUERY);
         statement.setLong(1, programId);
+        return statement;
+    }
+
+    private PreparedStatement prepareSelectByIdAndVerProgramStatement(Connection connection, Long programId, Long programVersion) throws SQLException {
+        PreparedStatement statement = connection.prepareStatement(SELECT_PROGRAM_BY_ID_AND_VER_QUERY);
+        statement.setLong(1, programId);
+        statement.setLong(2, programVersion);
         return statement;
     }
 
@@ -53,18 +75,27 @@ public class OptimisticLockingDao {
     public int updateProgram(Program updatedProgram) throws OptimisticLockingException {
         Objects.requireNonNull(updatedProgram);
         Objects.requireNonNull(updatedProgram.id);
+        int updatedFieldsCount = 0;
         try (Connection connection = getConnection()) {
-            Optional<Program> programOptional = findProgramById(updatedProgram.id);
-            Program updatableProgram = programOptional.orElseThrow(
-                    () -> new SQLException(String.format("Program with id = %d doesn't exists", updatedProgram.id))
-            );
-            updatableProgram.name = updatedProgram.name;
             connection.setAutoCommit(false);
-            connection.setTransactionIsolation(Connection.TRANSACTION_REPEATABLE_READ);
-            int updatedFieldsCount = 0;
             try {
-                requireConsistencyWithDatabase(updatableProgram);
+                Optional<Program> programOptional = findSuchProgram(updatedProgram);
+                Program updatableProgram = programOptional.orElseThrow(
+                        () -> new OptimisticLockingException(
+                                String.format("Unsuccessful update of program with id %d and version = %d",
+                                        updatedProgram.id,
+                                        updatedProgram.version)
+                        )
+                );
+                updatableProgram.name = updatedProgram.name;
                 updatedFieldsCount = updateProgram(connection, updatableProgram);
+                if (updatedFieldsCount == 0) {
+                    throw new OptimisticLockingException(
+                            String.format("Unsuccessful update of program with id %d and version = %d",
+                                    updatedProgram.id,
+                                    updatedProgram.version)
+                    );
+                }
             } catch (OptimisticLockingException ole) {
                 connection.rollback();
                 throw ole;
@@ -74,26 +105,13 @@ public class OptimisticLockingDao {
         } catch (SQLException e) {
             // ignore
         }
-        return 0;
-    }
-
-    private void requireConsistencyWithDatabase(Program program) throws OptimisticLockingException {
-        Optional<Program> programOptional = findProgramById(program.id);
-        Program programForCheck = programOptional.orElseThrow(
-                () -> new OptimisticLockingException(
-                        String.format("Transaction failed because %s entity was removed", program)
-                )
-        );
-        if (!programForCheck.version.equals(program.version)) {
-            throw new OptimisticLockingException(
-                    String.format("Transaction failed because %s entity was modified", program)
-            );
-        }
+        return updatedFieldsCount;
     }
 
     private int updateProgram(Connection connection, Program program) throws SQLException {
         PreparedStatement statement = connection.prepareStatement(UPDATE_PROGRAM_QUERY);
         statement.setString(1, program.name);
+        statement.setLong(4, program.version);
         statement.setLong(2, ++program.version);
         statement.setLong(3, program.id);
         return statement.executeUpdate();
