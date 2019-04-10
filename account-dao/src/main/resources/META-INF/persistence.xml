@@ -3,12 +3,13 @@
 
     <persistence-unit name="SingleAccountEntityPostgres">
         <class>ua.procamp.model.Account</class>
+        <class>ua.procamp.model.Card</class>
 
         <properties>
-            <property name="hibernate.connection.url" value="jdbc:postgresql://localhost:5433/procamp_db"/>
+            <property name="hibernate.connection.url" value="jdbc:postgresql://localhost:5432/procamp"/>
             <property name="hibernate.connection.driver_class" value="org.postgresql.Driver"/>
             <property name="hibernate.connection.username" value="postgres"/>
-            <property name="hibernate.connection.password" value="postgres"/>
+            <property name="hibernate.connection.password" value="root"/>
             <property name="hibernate.dialect" value="org.hibernate.dialect.PostgreSQL95Dialect"/>
             <property name="hibernate.show_sql" value="true"/>
             <property name="hibernate.hbm2ddl.auto" value="create"/>
@@ -17,6 +18,7 @@
 
     <persistence-unit name="SingleAccountEntityH2">
         <class>ua.procamp.model.Account</class>
+        <class>ua.procamp.model.Card</class>
 
         <properties>
             <property name="hibernate.connection.url" value="jdbc:h2:mem:bobocode_db;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=false"/>
