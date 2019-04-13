@@ -6,8 +6,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import javax.persistence.*;
-import java.lang.reflect.Type;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -69,11 +69,13 @@ public class Author {
     public boolean equals(final Object obj) {
         if (this == obj) {
             return true;
-        } else if (obj.getClass() == Author.class) {
-            return this.id.equals(((Author) obj).getId());
-        } else {
+        }
+        if (!(obj instanceof Author)) {
             return false;
         }
+        Author author = (Author) obj;
+
+        return Objects.nonNull(id) && author.id.equals(id);
     }
 
     @Override
